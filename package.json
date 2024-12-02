@@ -1,0 +1,17 @@
+{
+  "name": "hrms",
+  "version": "1.0.0",
+  "description": "a fullstack project for HRMS",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascript",
+    "SQL",
+    "Full_Stack",
+    "HRMS"
+  ],
+  "author": "Priyanshu Tiwari",
+  "license": "ISC"
+}
