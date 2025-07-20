@@ -5,9 +5,9 @@ import bcrypt from "bcrypt";
 const emplSchema = new Schema({
         emp_id: {
             type: String, 
-            required: true, 
+            
             unique: true, 
-            index: true, 
+            
             trim: true
         },
 

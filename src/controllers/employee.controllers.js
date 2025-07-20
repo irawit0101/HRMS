@@ -20,7 +20,7 @@ const registerEmpl = asyncHandler( async (req, res) => {
           emp_designation, emp_ph,
           emp_dept} = req.body
 
-    console.log("email:", email);
+    
     
     // Check if all the required fields are provided by the user and if not then throw an error
     if (
@@ -31,7 +31,6 @@ const registerEmpl = asyncHandler( async (req, res) => {
     ) {
         throw new ApiError(400, "Name of the employee is mandatory!!")
     }
-
 
     //check if the registering employee already exists or not
     const existedEmployee = await Employee.findOne({
@@ -53,7 +52,6 @@ const registerEmpl = asyncHandler( async (req, res) => {
     if (!avatarLocalPath){
         throw new ApiError(400, "Avatar is required field")
     }
-    console.log(avatarLocalPath);
     
     //upload the file on cloudinary and save its referrence
     const avatar = await uploadOnCloudinary(avatarLocalPath)
@@ -76,13 +74,13 @@ const registerEmpl = asyncHandler( async (req, res) => {
     })
 
     //check if new employee exists in the table or not
-    const createdEmpl = await Employee.findById(Employee._id).select(
+    const createdEmpl = await Employee.findById(employee._id).select(
         "-password -refreshToken"
     )
 
     //if new employee does not exist then throw error
     if (!createdEmpl) {
-        throw new ApiError(500, "Soemthing went wrong while registering")
+        throw new ApiError(500, "Something went wrong while registering")
     }
 
     // if none of the above are statisified then we can say that the employee has been successfully added to the mongodb table
