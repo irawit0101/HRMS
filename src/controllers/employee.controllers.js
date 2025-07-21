@@ -91,4 +91,16 @@ const registerEmpl = asyncHandler( async (req, res) => {
         
 })
 
- export { registerEmpl }
+
+const loginEmpl = asyncHandler(async (req, res) => {
+    // to do list 
+    // req body --> data
+    // check if name and email is available in the req.body
+    // compare email and check if user exists
+    // check password and give access token
+    // give refresh token
+})
+ export { 
+    registerEmpl, 
+    loginEmpl,
+}
