@@ -3,6 +3,24 @@ import { ApiError } from "../utils/ApiError.js"
 import { Employee } from "../models/employee.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { IncomingMessage } from "http";
+import jwt from "jsonwebtoken";
+
+const generateAccessAndRefreshToken = async(userId) => {
+    try {
+        const employee = await Employee.findById(userId)
+        const accessToken = employee.generateAccessToken()
+        const refreshToken = employee.generateRefreshToken()
+
+        employee.refreshToken = refreshToken
+        await employee.save({validateBeforeSave: false})
+
+        return {accessToken, refreshToken}
+
+    } catch (error) {
+        throw new ApiError(500, "Something went wrong while generating access and refresh token")
+    }
+}
 
 const registerEmpl = asyncHandler( async (req, res) => {
     
@@ -99,8 +117,132 @@ const loginEmpl = asyncHandler(async (req, res) => {
     // compare email and check if user exists
     // check password and give access token
     // give refresh token
+    // send secure cookies
+    // send response for successfull login
+
+
+    const {email, name, password} = req.body
+
+    if (!name && !email && !password) {
+        throw new ApiError(400, "email or employee name is not provided")
+    }    
+
+    const employee = await Employee.findOne({
+        $or: [{name}, {email}]
+    })
+
+    if (!employee) {
+        throw new ApiError(401, "Employee does not exist.")
+    }
+
+    const isPasswordValid = await employee.isPassworCorrect(password)
+
+    if(!isPasswordValid){
+        throw new ApiError(404, "Invalid employee credentials!!")
+    }
+
+    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(employee._id)
+
+    const loggedInEmpl = await Employee.findById(employee._id).select("-refreshToken -password")
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                employee: loggedInEmpl, accessToken, refreshToken
+            },
+            "Employee is logged in successfully"
+        )
+    )
 })
- export { 
+
+const logoutEmpl = asyncHandler(async (req, res) => {
+    await Employee.findByIdAndUpdate(
+        req.employee._id, 
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        }, 
+        {
+            new: true
+        }
+    )
+
+    const options = {
+        httpOnly: true, 
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(
+        new ApiResponse(
+            200, 
+            {}, 
+            "Employee is logged out"
+        )
+    )
+})
+const refreshAccessToken =  asyncHandler(async (req, res) => {
+
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.cookies
+
+    if (incomingRefreshToken) {
+        throw new ApiError(401, "Unauthorized request")
+    }
+
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET
+        )
+    
+        const employee = await Employee.findById(decodedToken?._id)
+    
+        if (!employee) {
+            throw new ApiError(401, "Invalid refresh token")
+        }
+    
+        if (incomingRefreshToken !== employee?.refreshToken) {
+            throw new ApiError(401, "incorrect refresh token")
+        }
+    
+        const options = {
+            httpOnly: true, 
+            secure: true
+        }
+    
+        const {accessToken, newRefreshToken } = await generateAccessAndRefreshToken(employee._id)
+    
+        return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", nmwRefreshToken, options)
+        .json(
+            new ApiResponse(
+                200, 
+                {accessToken, refreshToken, newRefreshToken}, 
+                "Access token refreshed"
+            )
+        )
+    } catch (error) {
+        throw new ApiError(402, "token invalid")
+    }
+})
+export { 
     registerEmpl, 
     loginEmpl,
+    logoutEmpl, 
+    refreshAccessToken
 }
