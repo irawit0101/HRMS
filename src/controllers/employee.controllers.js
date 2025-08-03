@@ -109,7 +109,6 @@ const registerEmpl = asyncHandler( async (req, res) => {
         
 })
 
-
 const loginEmpl = asyncHandler(async (req, res) => {
     // to do list 
     // req body --> data
@@ -195,6 +194,7 @@ const logoutEmpl = asyncHandler(async (req, res) => {
         )
     )
 })
+
 const refreshAccessToken =  asyncHandler(async (req, res) => {
 
     const incomingRefreshToken = req.cookies.refreshToken || req.body.cookies
@@ -240,9 +240,110 @@ const refreshAccessToken =  asyncHandler(async (req, res) => {
         throw new ApiError(402, "token invalid")
     }
 })
+
+const changeCuurentPassword = asyncHandler(async (req, res) => {
+    const {oldPassword, newPassword} = req.body
+
+    const employee = await Employee.findById(req.employee?._id)
+
+    const isPasswordCorrect = await employee.isPassworCorrect(oldPassword)
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Invalid old password")
+    }
+
+    employee.password = newPassword;
+    employee.save({validateBeforeSave: false})
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200, 
+            {},
+            "Password changed sucessfully"
+        )
+    )
+})
+
+const getCurrentEmployee =  asyncHandler( async (req, res) => {
+    return res.status(200, req.employee, "current employee fetched successfully")
+})
+
+
+const updateAccessDetails = asyncHandler(async (req, res) => {
+    const {emp_name, email} = req.body
+
+    if (!emp_name && !email) {
+        throw new ApiError(400, "All fields are required")
+    }
+
+    const employee = awaitEmployee.findByIdAndUpdate(
+        req.employee?._id, 
+        {
+            $set: {
+                emp_name, 
+                email
+            }
+        }, 
+        {new: true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200, 
+            employee, 
+            "details updated successfully"
+        )
+    )
+})
+
+
+const updateAvatar = asyncHandler(async (req, res) => {
+    const avatarLocalPath = req.file?.path
+
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "path is not available")
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if (!avatar.url) {
+        throw new ApiError(400, "Error while updating avatar")
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+        req.employee?._id, 
+        {
+            $set: {
+                avatar: avatar.url
+            }
+        }, 
+        {
+            new: true
+        }
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200, 
+            employee, 
+            "avatar updated successfully"
+        )
+    )
+})
+
 export { 
     registerEmpl, 
     loginEmpl,
     logoutEmpl, 
-    refreshAccessToken
+    refreshAccessToken, 
+    isPassworCorrect, 
+    getCurrentEmployee, 
+    updateAccessDetails, 
+    updateAvatar
 }
